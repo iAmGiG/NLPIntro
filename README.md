@@ -1,6 +1,6 @@
 # Regex Utility Module for Text Processing Tasks
 
-This project provides a utility module to solve common text processing tasks using regular expressions (regex) in Python. The module includes solutions for:
+This project provides a utility module to solve common text processing tasks using regular expressions (regex) in Python. The **module** includes solutions for:
 
 1. **Password validation**: Ensuring that a password meets specific complexity requirements.
 2. **Subdomain extraction**: Extracting the subdomain from a URL if present.
@@ -55,7 +55,7 @@ The project is designed to be simple, extensible, and easily integrated with bot
 1. **Create a Conda environment**:
 
     ```bash
-    conda create --name regex-env python=3.9
+    conda create --name regex-env python=3.12
     ```
 
 2. **Activate the environment**:

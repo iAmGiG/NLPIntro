@@ -1,0 +1,3 @@
+absl-py
+PyQt6
+nltk

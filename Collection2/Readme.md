@@ -56,28 +56,30 @@ After clicking "Calculate", you should see results similar to:
 
 ```yaml
 Unigram Probabilities:
-<s>: 0.0909
-the: 0.1818
-quick: 0.0909
-brown: 0.0909
-fox: 0.0909
-jumps: 0.0909
-over: 0.0909
-lazy: 0.0909
-dog: 0.0909
-</s>: 0.0909
+the: 0.166667
+<s>: 0.083333
+quick: 0.083333
+brown: 0.083333
+fox: 0.083333
+jumps: 0.083333
+over: 0.083333
+lazy: 0.083333
+dog: 0.083333
+.: 0.083333
+</s>: 0.083333
 
 Bigram Probabilities:
-<s> the: 1.0000
-the quick: 0.5000
-quick brown: 1.0000
-brown fox: 1.0000
-fox jumps: 1.0000
-jumps over: 1.0000
-over the: 1.0000
-the lazy: 0.5000
-lazy dog: 1.0000
-dog </s>: 1.0000
+<s> the: 1.0
+quick brown: 1.0
+brown fox: 1.0
+fox jumps: 1.0
+jumps over: 1.0
+over the: 1.0
+lazy dog: 1.0
+dog .: 1.0
+. </s>: 1.0
+the quick: 0.5
+the lazy: 0.5
 ```
 
 These probabilities represent the likelihood of each word (unigrams) and each word pair (bigrams) occurring in the given text.
@@ -86,3 +88,25 @@ These probabilities represent the likelihood of each word (unigrams) and each wo
 
 The application adds start (<s>) and end (</s>) symbols to handle sentence boundaries properly.
 The probabilities are unsmoothed and based solely on the frequency counts in the input text.
+
+### Using the notbook verions
+
+**Install Dependencies:**
+Make sure you have Python 3.x installed. Install the required packages using:
+
+```bash
+pip install nltk pandas
+```
+
+**Run the Notebook:**
+Open the Jupyter Notebook and run each cell sequentially.
+
+**Input Your Text:**
+In the "Input Text" section, replace the example text with your own text:
+
+```python
+text = "Your text goes here."
+```
+
+**Compute and Display Results:**
+Run the subsequent cells to compute unigrams, bigrams, and display their probabilities.

@@ -41,6 +41,12 @@ You can adjust the smoothing parameter (alpha) using the --alpha flag:
 python multinomial_naive_bayes_gui.py --alpha=1.0
 ```
 
+### Jupyter Notebook
+
+- Run the notebook cells sequentially.
+- Modify the training data or input document as desired.
+- View the detailed probability computations and classification results.
+
 ### Example
 
 1. Enter the new document in the text input area:

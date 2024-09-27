@@ -17,15 +17,20 @@ from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QTextEdit, QPush
 from nltk.tokenize import word_tokenize
 import nltk
 
-# Download necessary NLTK data
+# Download necessary NLTK data, ensures that the tokenizastino model,
+# which is punkt are avaible for splitting the text into words.
 nltk.download('punkt', quiet=True)
 
+# if running in Terminal mode, use `--input_text="[input text]"` flag.
 FLAGS = flags.FLAGS
 flags.DEFINE_string('input_text', None, 'Input text for analysis')
 
 
 class UnigramBigramCalculator(QWidget):
-    """A GUI application to compute unsmoothed unigram and bigram probabilities."""
+    """
+    A GUI application to compute unsmoothed unigram and bigram probabilities.
+    Default mode is to run in application mode, were a gui is used to input text and recive an result via the output.
+    """
 
     def __init__(self):
         """Initialize the UnigramBigramCalculator GUI."""
@@ -51,10 +56,18 @@ class UnigramBigramCalculator(QWidget):
 
         self.setLayout(layout)
         self.setWindowTitle('Unigram and Bigram Calculator')
-        self.setGeometry(300, 300, 400, 400)
+        self.setGeometry(300, 300, 800, 500)
 
     def calculate(self):
-        """Calculate and display unigram and bigram probabilities based on input text."""
+        """
+        Calculate and display unigram and bigram probabilities based on input text.
+
+        Process:
+            - retrieve input: `text = self.text_input.toPlainText()` gets the user input from the QT text edit widget.
+            - compute Unigrams and Bigrams: calls `self. compute_igrams(text)` to calculate unigrams and bigrams.
+            - Format results: calls `self. format_results(unigrams, bigrams)` to format the results into a readable string.
+            - Display Results: sets the formatted result string in the `result_display` widget using `self. result_display.setText(result)`.
+            """
         text = self.text_input.toPlainText()
         unigrams, bigrams = self.compute_ngrams(text)
         result = self.format_results(unigrams, bigrams)
@@ -69,6 +82,14 @@ class UnigramBigramCalculator(QWidget):
 
         Returns:
             tuple: A tuple containing dictionaries of unigram and bigram counts.
+
+        Purpose: This method computes the unigram and bigram counts from the input text.
+        Process:
+            - Tokenize text: uses `word_tokenize` from NLTK to split the input text into words. adds start (`<s>`) and ends (`</s>`) 
+                tokens to properly handle sentence boundaries.
+            - Unigrams: a `defaultdict(int)` to store unigram counts. loops over each token and increments the ecount for that toekn.
+            - biigrams: another `defaultdict(int)` stores the bigram counts. looping over consecutive token pairs and increments the count for each pair.
+        Return: result list the unigram and bigram dicts, containing the counts.
         """
         tokens = ['<s>'] + word_tokenize(text.lower()) + ['</s>']
 
@@ -91,6 +112,18 @@ class UnigramBigramCalculator(QWidget):
             unigrams (dict): Dictionary of unigram counts.
             bigrams (dict): Dictionary of bigram counts.
 
+        Process:
+            - total unigrams: calcuate the total number of unigrams by summing the values in the `unigrams` dict.
+            - unigram probabilites:
+                - loops through each token and its count in the `unigram` dict.
+                - computes the probability of each unigram: `prob = count / total_unigrams`.
+                - appends the token and its probability to the result string.
+            - bigram probabilities:
+                - loops through each bigram (pain of tokens) and its count in the `bigrams` dict.
+                - Computs the probability of each bigram: `prob = count / unigrams[token1]`, 
+                    where `token1` is the first token of the bigram.
+                - appends the bigram ands it probability to the result string.
+
         Returns:
             str: A formatted string of unigram and bigram probabilities.
         """
@@ -111,7 +144,14 @@ class UnigramBigramCalculator(QWidget):
 
 def main(argv):
     """
-    The main function to run the GUI application.
+    The main function to run the GUI application. If the input flag is not none, 
+        run the calculator on the input text from the flag.
+    A Unigram is made of single words in teh text. 
+        the program counts how many times each word appears and calcuates it probabilty 
+        by dividign its count by the total number of unigrams.
+    A bigram is a pair of consecutive words in the text. the program counts 
+        how many times each pair of words appears and calcuates its 
+        probability by dividing its count by the count of the first word in the pair.
 
     Args:
         argv (list): List of command-line arguments.

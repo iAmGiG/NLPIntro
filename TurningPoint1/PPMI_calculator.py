@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
         """
         super().__init__()
         self.setWindowTitle("PPMI Calculator")
-
+        
         # Corpus input
         self.corpus_label = QLabel("Corpus (text data):")
         self.corpus_text = QTextEdit()
@@ -226,7 +226,7 @@ class MainWindow(QMainWindow):
         co_occurrence = np.zeros((vocab_size, vocab_size), dtype=np.float64)
 
         # Build co-occurrence matrix
-        window_size = 2  # You can adjust the window size
+        window_size = 2  # Default size is 2
         for words in documents:
             for idx, word in enumerate(words):
                 word_idx = vocab_to_index[word]

@@ -7,7 +7,6 @@ This PPMI calculator does many things.
 - Performs vector representations using the PPMI matrix to get the cosine similarity.
 - Allows for word pair analysis.
 """
-
 import sys
 import os
 from itertools import combinations
@@ -111,11 +110,11 @@ class MainWindow(QMainWindow):
         self.corpus_label = QLabel("Corpus (text data):")
         self.corpus_text = QTextEdit()
         self.corpus_text.setPlainText(
-            "I love pizza\n"
-            "I love pasta\n"
-            "I hate broccoli\n"
-            "I enjoy pizza and pasta\n"
-            "Broccoli is healthy"
+            "I love pizza.\n"
+            "I love pasta.\n"
+            "I hate broccoli.\n"
+            "I enjoy pizza and pasta.\n"
+            "Broccoli is healthy."
         )
 
         # Vocabulary display
@@ -194,7 +193,7 @@ class MainWindow(QMainWindow):
         corpus_text = self.corpus_text.toPlainText()
 
         # Tokenize sentences, split by newlines
-        sentences = corpus_text.strip().split('\n')
+        sentences = nltk.sent_tokenize(corpus_text)
 
         # Generate vocabulary using NLTK
         include_stopwords = self.stopwords_checkbox.isChecked()
@@ -218,11 +217,11 @@ class MainWindow(QMainWindow):
                     f"({w1}, {w2})" for w1, w2 in pairs)
                 self.occurring_pairs.append(
                     (sentence.strip(), formatted_pairs))
-        self.documents = documents  # Store for later use
+        self.documents = documents
 
         # Create vocabulary sorted alphabetically
         vocab = sorted(set(all_words))
-        self.vocab = vocab  # Store for later use
+        self.vocab = vocab
 
         # Update vocabulary display
         self.vocab_display.setPlainText('\n'.join(self.vocab))
@@ -235,14 +234,14 @@ class MainWindow(QMainWindow):
         co_occurrence = np.zeros((vocab_size, vocab_size), dtype=np.float64)
 
         # Build co-occurrence matrix
-        window_size = 2  # Context window size is set to 2
+        window_size = 2  # Context window size is set here
         for words in documents:
             for idx, word in enumerate(words):
                 word_idx = vocab_to_index[word]
                 # Define the context window
                 start = max(0, idx - window_size)
                 end = min(len(words), idx + window_size + 1)
-                context_words = words[start:idx] + words[idx+1:end]
+                context_words = words[start:idx] + words[idx + 1:end]
                 for context_word in context_words:
                     context_idx = vocab_to_index[context_word]
                     co_occurrence[word_idx, context_idx] += 1
@@ -317,7 +316,7 @@ class MainWindow(QMainWindow):
         # Clear existing tabs
         self.output_tabs.clear()
 
-        # Add human-friendly explanations for each matrix
+        # Explanations for each matrix
         matrix_explanations = {
             "Co-occurrence Matrix": "The co-occurrence matrix shows how often words appear together in the given text.",
             "Probability Matrix": "The probability matrix shows the probability of word co-occurrences relative to the total co-occurrences in the text.",

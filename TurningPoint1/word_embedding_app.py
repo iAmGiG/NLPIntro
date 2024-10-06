@@ -1,11 +1,34 @@
+"""
+Word embedding calculator app.
+### Features:
+1. Loading Word Embeddings:
+   - Accepts word embeddings in the format: `"word": [x1, x2, x3]`.
+
+2. Context-Target Pairs Generation:
+    - Generates all context-target word pairs for a given document using 
+    a user-specified window size (W).
+
+
+3. Word Embedding Update:
+    - Computes the dot product between the target and context embeddings, 
+        applies the sigmoid function, and updates the embeddings using a calculated gradient.
+
+4. Negative Sampling
+    - Performs negative sampling for a given target-context 
+        word pair by computing the dot product between the target word 
+        and randomly sampled negative words.
+
+5. Cosine Similarity Calculation
+    - Computes the cosine similarity between two words based on their updated embeddings.
+   
+"""
 import sys
+import re
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QTextEdit,
-    QVBoxLayout, QHBoxLayout, QMessageBox, QLineEdit, QFileDialog
+    QVBoxLayout, QMessageBox, QLineEdit
 )
-from PyQt6.QtCore import Qt
 import numpy as np
-import re
 
 
 class WordEmbeddingApp(QWidget):
@@ -30,7 +53,7 @@ class WordEmbeddingApp(QWidget):
         layout.addLayout(emb_layout)
 
         # Negative Samples Input
-        neg_layout = QVBoxLayout()
+        # neg_layout = QVBoxLayout()
         neg_label = QLabel("Negative Samples (comma-separated words)")
         self.neg_input = QLineEdit()
         self.neg_input.setPlaceholderText("Enter negative samples here...")
@@ -136,6 +159,10 @@ class WordEmbeddingApp(QWidget):
             self, "Success", "Embeddings loaded successfully.")
 
     def calculate_q1(self):
+        """
+        - Input the document text and window size (W).
+        - Click **"Calculate"** to generate context-target word pairs based on the window size.
+        """
         text = self.q1_input.toPlainText().lower()
         W = self.q1_window_size.text()
         if not W.isdigit():
@@ -155,6 +182,10 @@ class WordEmbeddingApp(QWidget):
         QMessageBox.information(self, "Context-Target Pairs", output)
 
     def calculate_q2(self):
+        """
+        - Input the target and context words.
+        - Click **"Calculate"** to perform an embedding update via gradient descent.
+        """
         target_word = self.q2_target_word.text().lower()
         context_word = self.q2_context_word.text().lower()
         learning_rate = 0.01
@@ -199,6 +230,10 @@ class WordEmbeddingApp(QWidget):
         QMessageBox.information(self, "Word Embedding Update", output)
 
     def calculate_q3(self):
+        """   
+        - Input the target word, context word, and comma-separated negative samples.
+        - Click **"Calculate"** to compute the dot product between the target word and negative samples.        
+        """
         target_word = self.q3_target_word.text().lower()
         context_word = self.q3_context_word.text().lower()
         neg_samples_input = self.neg_input.text().lower()
@@ -234,6 +269,10 @@ class WordEmbeddingApp(QWidget):
         QMessageBox.information(self, "Negative Sampling", output)
 
     def calculate_q4(self):
+        """
+        - Input two words.
+        - Click **"Calculate"** to compute their cosine similarity based on their embeddings.
+        """
         word1 = self.q4_word1.text().lower()
         word2 = self.q4_word2.text().lower()
 

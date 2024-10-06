@@ -108,16 +108,25 @@ class WordEmbeddingApp(QWidget):
 
     def load_embeddings(self):
         emb_text = self.emb_input.toPlainText()
-        pattern = re.compile(r'\"?(\w+)\"?\s*:\s*\[([^\]]+)\]')
+
+        # Replace Unicode minus sign with standard hyphen-minus
+        emb_text = emb_text.replace('−', '-')  # Replace Unicode minus sign
+        # Additional replacement if necessary
+        emb_text = emb_text.replace('\u2212', '-')
+
+        # Regular expression to match word embeddings
+        pattern = re.compile(r'\"?(\w+)\"?\s*:\s*\[([^\]]+)\]', re.UNICODE)
         matches = pattern.findall(emb_text)
         if not matches:
             QMessageBox.warning(self, "Input Error",
                                 "No valid embeddings found.")
             return
-        for word, vector in matches:
+        for word, vector_str in matches:
             try:
-                vector = np.array([float(x.strip())
-                                  for x in vector.split(',')])
+                # Split the vector components and handle any extra spaces
+                vector_components = [x.strip()
+                                     for x in vector_str.strip().split(',')]
+                vector = np.array([float(x) for x in vector_components])
                 self.embeddings[word.lower()] = vector
             except ValueError:
                 QMessageBox.warning(self, "Input Error",

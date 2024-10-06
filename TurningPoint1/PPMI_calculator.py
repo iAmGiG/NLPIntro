@@ -1,7 +1,4 @@
 import sys
-import os
-import re
-from itertools import combinations
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QTextEdit,
     QPushButton, QVBoxLayout, QHBoxLayout, QTableView, QMessageBox,
@@ -10,10 +7,13 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QAbstractTableModel, Qt
 import numpy as np
 import pandas as pd
+import re
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from sklearn.metrics.pairwise import cosine_similarity
+import os
+from itertools import combinations
 
 # Download NLTK data files if not already present
 nltk.download('punkt', quiet=True)
@@ -124,12 +124,25 @@ class MainWindow(QMainWindow):
         self.calculate_button = QPushButton("Calculate")
         self.calculate_button.clicked.connect(self.calculate_ppmi)
 
+        # Word Pair Analysis Input
+        self.word_pairs_label = QLabel(
+            "Word Pairs (comma-separated, e.g., 'word1,word2'):")
+        self.word_pairs_input = QTextEdit()
+        self.word_pairs_input.setPlaceholderText(
+            "Enter word pairs, one per line, e.g.\npizza,pasta\nlove,healthy")
+        self.word_pair_calculate_button = QPushButton("Analyze Word Pairs")
+        self.word_pair_calculate_button.clicked.connect(
+            self.analyze_word_pairs)
+
         # Layout for corpus input and calculate button
         corpus_layout = QVBoxLayout()
         corpus_layout.addWidget(self.corpus_label)
         corpus_layout.addWidget(self.corpus_text)
         corpus_layout.addWidget(self.stopwords_checkbox)
         corpus_layout.addWidget(self.calculate_button)
+        corpus_layout.addWidget(self.word_pairs_label)
+        corpus_layout.addWidget(self.word_pairs_input)
+        corpus_layout.addWidget(self.word_pair_calculate_button)
 
         # Layout for vocabulary display
         vocab_layout = QVBoxLayout()
@@ -171,8 +184,8 @@ class MainWindow(QMainWindow):
         # Read and process corpus
         corpus_text = self.corpus_text.toPlainText()
 
-        # Tokenize sentences, split by both newlines and punctuation
-        sentences = re.split(r'(?<=[.!?])\s+', corpus_text.strip())
+        # Tokenize sentences, split by newlines
+        sentences = corpus_text.strip().split('\n')
 
         # Generate vocabulary using NLTK
         include_stopwords = self.stopwords_checkbox.isChecked()
@@ -189,7 +202,7 @@ class MainWindow(QMainWindow):
             all_words.extend(words)
             if words:
                 documents.append(words)
-                # Generate word pairs for the sentence, excluding self-pairs (w1, w1)
+                # Generate word pairs for the sentence, excluding self-pairs (w1 != w2)
                 pairs = [(w1, w2)
                          for w1, w2 in combinations(words, 2) if w1 != w2]
                 formatted_pairs = ', '.join(
@@ -281,8 +294,8 @@ class MainWindow(QMainWindow):
             # Display the matrices and analyses
             self.display_matrices()
             self.display_occurring_pairs()
-            self.analyze_word_pairs()
             self.compute_document_vectors()
+            # Note: analyze_word_pairs() is now called separately when the user clicks "Analyze Word Pairs"
 
         except Exception as e:
             QMessageBox.critical(
@@ -359,10 +372,29 @@ class MainWindow(QMainWindow):
 
     def analyze_word_pairs(self):
         """
-        Analyze the association for specific word pairs and display the results.
+        Analyze the association for user-specified word pairs and display the results.
         """
+        if self.ppmi_matrix_df is None:
+            QMessageBox.warning(
+                self, "Warning", "Please calculate the PPMI matrix first by clicking 'Calculate'.")
+            return
+
+        # Get word pairs from input
+        input_text = self.word_pairs_input.toPlainText()
+        lines = input_text.strip().split('\n')
+        word_pairs = []
+        for line in lines:
+            words = line.strip().split(',')
+            if len(words) == 2:
+                word_pairs.append((words[0].strip(), words[1].strip()))
+
+        if not word_pairs:
+            QMessageBox.warning(
+                self, "Warning", "Please enter valid word pairs.")
+            return
+
+        # Proceed with analysis
         analysis_text = ""
-        word_pairs = [("pizza", "pasta"), ("love", "healthy")]
         for word1, word2 in word_pairs:
             if word1 in self.vocab and word2 in self.vocab:
                 ppmi_value = self.ppmi_matrix_df.loc[word1, word2]
@@ -400,6 +432,12 @@ class MainWindow(QMainWindow):
                     idx = self.vocab.index(word)
                     vector += self.ppmi_matrix_df.iloc[idx].values
             document_vectors.append(vector)
+
+        if len(document_vectors) < 2:
+            # Not enough documents to compute similarity
+            QMessageBox.warning(
+                self, "Warning", "Not enough documents to compute similarity. Please ensure your corpus has at least two documents.")
+            return
 
         # Compute cosine similarity between documents
         similarity_matrix = cosine_similarity(document_vectors)

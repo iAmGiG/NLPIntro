@@ -1,4 +1,16 @@
+"""
+This PPMI calculator does many things.
+- Generates a co-occurrence matrix.
+- Creates a probability matrix.
+- Calculates the context counts.
+- Generates the PPMI matrix.
+- Performs vector representations using the PPMI matrix to get the cosine similarity.
+- Allows for word pair analysis.
+"""
+
 import sys
+import os
+from itertools import combinations
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QTextEdit,
     QPushButton, QVBoxLayout, QHBoxLayout, QTableView, QMessageBox,
@@ -7,13 +19,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QAbstractTableModel, Qt
 import numpy as np
 import pandas as pd
-import re
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from sklearn.metrics.pairwise import cosine_similarity
-import os
-from itertools import combinations
 
 # Download NLTK data files if not already present
 nltk.download('punkt', quiet=True)
@@ -97,7 +106,7 @@ class MainWindow(QMainWindow):
         """
         super().__init__()
         self.setWindowTitle("PPMI Calculator")
-        
+
         # Corpus input
         self.corpus_label = QLabel("Corpus (text data):")
         self.corpus_text = QTextEdit()
@@ -226,7 +235,7 @@ class MainWindow(QMainWindow):
         co_occurrence = np.zeros((vocab_size, vocab_size), dtype=np.float64)
 
         # Build co-occurrence matrix
-        window_size = 2  # Default size is 2
+        window_size = 2  # Context window size is set to 2
         for words in documents:
             for idx, word in enumerate(words):
                 word_idx = vocab_to_index[word]
@@ -424,14 +433,24 @@ class MainWindow(QMainWindow):
         """
         # Create a vector for each document
         document_vectors = []
-        for doc_words in self.documents:
+        document_vector_texts = []  # Store vector representations as text
+        for idx, doc_words in enumerate(self.documents):
             # Sum the PPMI vectors of the words in the document
             vector = np.zeros(len(self.vocab))
             for word in doc_words:
                 if word in self.vocab:
-                    idx = self.vocab.index(word)
-                    vector += self.ppmi_matrix_df.iloc[idx].values
+                    idx_word = self.vocab.index(word)
+                    vector += self.ppmi_matrix_df.iloc[idx_word].values
             document_vectors.append(vector)
+
+            # Create a DataFrame for the vector
+            vector_df = pd.DataFrame(vector.reshape(1, -1), columns=self.vocab)
+            vector_text = f"Document {
+                idx+1} Vector Representation:\n{vector_df.to_string(index=False)}\n"
+            document_vector_texts.append(vector_text)
+
+        # Display the vector representations in a new tab
+        self.display_document_vectors(document_vector_texts)
 
         if len(document_vectors) < 2:
             # Not enough documents to compute similarity
@@ -476,6 +495,22 @@ class MainWindow(QMainWindow):
         tab.setLayout(layout)
         self.output_tabs.addTab(tab, "Document Similarity")
 
+    def display_document_vectors(self, document_vector_texts):
+        """
+        Display the vector representations of documents in the GUI.
+        """
+        # Combine all vector texts
+        combined_text = "\n\n".join(document_vector_texts)
+
+        # Display in a new tab
+        tab = QWidget()
+        layout = QVBoxLayout()
+        text_browser = QTextBrowser()
+        text_browser.setText(combined_text)
+        layout.addWidget(text_browser)
+        tab.setLayout(layout)
+        self.output_tabs.addTab(tab, "Document Vectors")
+
     def save_matrix(self, df, name, message_label):
         """
         Save a matrix to a CSV file in the current working directory.
@@ -487,7 +522,7 @@ class MainWindow(QMainWindow):
         """
         try:
             file_name = f"{name.lower().replace(' ', '_')}.csv"
-            df.to_csv(file_name)
+            df.to_csv(file_name, index=True)
             message = f"Saved to {os.path.abspath(file_name)}"
             message_label.setText(message)
         except Exception as e:

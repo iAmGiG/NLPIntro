@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QTextEdit, QPushButton, QLabel,
                              QFileDialog, QGridLayout)
 from tfidf_calculator import TFIDFCalculator
+from tfidf_formatter import TFIDFFormatter
 from relevance_scorer import RelevanceScorer
 
 
@@ -120,22 +121,40 @@ class TFIDFWindow(QMainWindow):
         layout.addLayout(partb_output_layout)
 
     def calculate_tfidf(self):
-        """Calculate TF-IDF and update outputs"""
+        """Calculate TF-IDF and update outputs."""
         query = self.query_input.toPlainText()
+        # Correctly access the individual answer inputs
         answers = [
             self.answer1_input.toPlainText(),
             self.answer2_input.toPlainText(),
             self.answer3_input.toPlainText()
         ]
 
-        # Perform calculations
-        all_texts = [query] + answers
+        texts = [query] + answers
         self.calculator.text_labels = ["Q", "A1", "A2", "A3"]
-        self.calculator.compute_tfidf(all_texts)
 
-        # Update outputs
-        self.latex_output.setText(self.calculator.generate_latex())
-        self.human_output.setText(self.calculator.generate_human_readable())
+        # Perform the TF-IDF calculation
+        self.calculator.compute_tfidf(texts)
+
+        # Get the vocabulary and TF-IDF vectors from the calculator
+        vocabulary = self.calculator.vocabulary
+        tfidf_vectors = self.calculator.tfidf_vectors
+
+        # Update the outputs using the formatter
+        self.latex_output.setText(
+            TFIDFFormatter.generate_latex(
+                vocabulary=vocabulary,
+                tfidf_vectors=tfidf_vectors,
+                text_labels=self.calculator.text_labels
+            )
+        )
+        self.human_output.setText(
+            TFIDFFormatter.generate_human_readable(
+                vocabulary=vocabulary,
+                tfidf_vectors=tfidf_vectors,
+                text_labels=self.calculator.text_labels
+            )
+        )
 
     def save_latex(self):
         """Save LaTeX output to file"""
@@ -154,9 +173,12 @@ class TFIDFWindow(QMainWindow):
                 file_name += '.tex'
 
             latex_content = (
-                "\\documentclass{article}\n"
+                "\\documentclass[12pt]{article}\n"
                 "\\usepackage{amsmath}\n"
+                "\\usepackage{geometry}\n"
+                "\\geometry{margin=1in}\n"
                 "\\begin{document}\n\n"
+                "% TF-IDF Matrix for Query and Answers\n"
                 "\\[\n"
                 f"{self.calculator.generate_latex()}\n"
                 "\\]\n\n"
@@ -166,6 +188,7 @@ class TFIDFWindow(QMainWindow):
             try:
                 with open(file_name, 'w') as f:
                     f.write(latex_content)
+                print(f"Successfully saved LaTeX file to {file_name}")
             except Exception as e:
                 print(f"Error saving file: {e}")
 

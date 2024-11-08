@@ -32,8 +32,8 @@ Date: 24H2
 Version: 1.0
 """
 
-from collections import Counter
 import math
+from collections import Counter
 import numpy as np
 
 
@@ -45,6 +45,7 @@ class TFIDFCalculator:
         self.word_to_idx = None
         self.text_labels = None
         self.word_labels = None
+        self.vocabulary = None
 
     def preprocess_text(self, text):
         """Convert text to lowercase and split into words."""
@@ -169,25 +170,26 @@ class TFIDFCalculator:
         all_words = set()
         for text in texts:
             all_words.update(self.preprocess_text(text))
-        self.word_to_idx = {word: i for i,
-                            word in enumerate(sorted(all_words))}
+        self.vocabulary = sorted(all_words)  # Store vocabulary
+
+        # Create word-to-index mapping
+        self.word_to_idx = {word: i for i, word in enumerate(self.vocabulary)}
 
         # Compute IDF
         idf = self.compute_idf(texts)
 
-        # Compute TF-IDF for each text
+        # Compute TF-IDF vectors for each text
         self.tfidf_vectors = []
         for text in texts:
             tf = self.compute_tf(text)
-            tfidf = np.zeros(len(self.word_to_idx))
+            tfidf = np.zeros(len(self.vocabulary))
             for word, tf_value in tf.items():
                 if word in self.word_to_idx:
                     idx = self.word_to_idx[word]
                     tfidf[idx] = tf_value * idf[word]
             self.tfidf_vectors.append(tfidf)
 
-        self.word_labels = sorted(self.word_to_idx.keys())
-        return self.tfidf_vectors, self.word_to_idx
+        return self.tfidf_vectors, self.vocabulary
 
     def generate_latex(self):
         """
@@ -221,18 +223,47 @@ class TFIDFCalculator:
             Requires the TF-IDF calculations to have been performed first.
             Returns an error message if called before calculations.
         """
-        if self.tfidf_vectors is None:
-            return "No calculations performed yet."
+        if self.tfidf_vectors is None or not self.vocabulary:
+            return ""
 
-        latex = "\\begin{array}{c|" + "c" * len(self.word_labels) + "}\n"
-        latex += " & " + " & ".join(self.word_labels) + " \\\\ \\hline\n"
+        # Calculate maximum word length for spacing
+        max_word_len = max(len(word) for word in self.vocabulary)
 
-        for i, row in enumerate(self.tfidf_vectors):
-            latex += self.text_labels[i] + " & " + \
-                " & ".join(f"{x:.3f}" for x in row) + " \\\\\n"
+        # Split vocabulary into chunks for better display
+        chunk_size = 8  # Adjust this value based on page width
+        vocab_chunks = [list(self.vocabulary)[i:i + chunk_size]
+                        for i in range(0, len(self.vocabulary), chunk_size)]
 
-        latex += "\\end{array}"
-        return latex
+        latex_chunks = []
+        for chunk_idx, vocab_chunk in enumerate(vocab_chunks):
+            # Create column headers for current chunk
+            header = " & ".join(word.ljust(max_word_len)
+                                for word in vocab_chunk)
+
+            # Create matrix rows for current chunk
+            rows = []
+            for label_idx, label in enumerate(self.text_labels):
+                values = []
+                for word in vocab_chunk:
+                    word_idx = list(self.vocabulary).index(word)
+                    value = self.tfidf_vectors[label_idx][word_idx]
+                    values.append(f"{value:.3f}")
+                rows.append(f"{label} & {' & '.join(values)} \\\\")
+
+            # Combine into a matrix
+            matrix = (
+                "\\begin{array}{c|" + "c" * len(vocab_chunk) + "}\n"
+                f" & {header} \\\\ \\hline\n"
+                f"{chr(10).join(rows)}\n"
+                "\\end{array}"
+            )
+
+            latex_chunks.append(matrix)
+
+        # Combine all chunks with appropriate spacing
+        final_latex = "\n\\vspace{1em}\n".join(latex_chunks)
+
+        return final_latex
 
     def generate_human_readable(self):
         """
@@ -267,18 +298,24 @@ class TFIDFCalculator:
             Requires the TF-IDF calculations to have been performed first.
             Returns an error message if called before calculations.
         """
-        if self.tfidf_vectors is None:
-            return "No calculations performed yet."
+        if self.tfidf_vectors is None or not self.vocabulary:
+            return ""
 
-        output = "TF-IDF Matrix:\n\n"
-        # Header
-        output += "Document | " + \
-            " | ".join(f"{word:>10}" for word in self.word_labels) + "\n"
-        output += "-" * (11 + 13 * len(self.word_labels)) + "\n"
+        output = []
+        vocab_list = list(self.vocabulary)
 
-        # Data rows
-        for i, row in enumerate(self.tfidf_vectors):
-            output += f"{self.text_labels[i]:8} | "
-            output += " | ".join(f"{x:10.3f}" for x in row) + "\n"
+        # Create header
+        header = "Word".ljust(20) + "".join(label.ljust(15)
+                                            for label in self.text_labels)
+        output.append(header)
+        output.append("-" * len(header))
 
-        return output
+        # Add rows for each word
+        for word_idx, word in enumerate(vocab_list):
+            row = [word.ljust(20)]
+            for vector_idx in range(len(self.text_labels)):
+                value = self.tfidf_vectors[vector_idx][word_idx]
+                row.append(f"{value:.3f}".ljust(15))
+            output.append("".join(row))
+
+        return "\n".join(output)

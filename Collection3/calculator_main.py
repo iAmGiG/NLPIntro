@@ -2,6 +2,7 @@ import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QTextEdit, QPushButton, QLabel,
                              QFileDialog, QGridLayout)
+from PyQt6.QtGui import QClipboard
 from tfidf_calculator import TFIDFCalculator
 from tfidf_formatter import TFIDFFormatter
 from relevance_scorer import RelevanceScorer
@@ -68,6 +69,12 @@ class TFIDFWindow(QMainWindow):
         self.latex_output = QTextEdit()
         self.latex_output.setReadOnly(True)
         latex_group.addWidget(self.latex_output)
+
+        # Add Copy Button for LaTeX Output
+        copy_latex_btn = QPushButton("Copy LaTeX to Clipboard")
+        copy_latex_btn.clicked.connect(self.copy_latex_to_clipboard)
+        latex_group.addWidget(copy_latex_btn)
+
         output_layout.addLayout(latex_group)
 
         # Human readable output
@@ -76,6 +83,12 @@ class TFIDFWindow(QMainWindow):
         self.human_output = QTextEdit()
         self.human_output.setReadOnly(True)
         human_group.addWidget(self.human_output)
+
+        # Add Copy Button for Human Readable Output
+        copy_human_btn = QPushButton("Copy Human Readable to Clipboard")
+        copy_human_btn.clicked.connect(self.copy_human_to_clipboard)
+        human_group.addWidget(copy_human_btn)
+
         output_layout.addLayout(human_group)
 
         layout.addLayout(output_layout)
@@ -89,16 +102,6 @@ class TFIDFWindow(QMainWindow):
         self.answer3_input.setText(
             "Electric vehicles help reduce carbon emissions.")
 
-        # Part B Calculation Button
-        calculate_partb_btn = QPushButton("Calculate Relevance Scores")
-        calculate_partb_btn.clicked.connect(self.calculate_relevance_scores)
-        button_layout.addWidget(calculate_partb_btn)
-
-        # Save Part B LaTeX Button
-        save_partb_latex_btn = QPushButton("Save Part B LaTeX")
-        save_partb_latex_btn.clicked.connect(self.save_partb_latex)
-        button_layout.addWidget(save_partb_latex_btn)
-
         # Part B Output Sections
         partb_output_layout = QHBoxLayout()
 
@@ -108,6 +111,14 @@ class TFIDFWindow(QMainWindow):
         self.partb_human_output = QTextEdit()
         self.partb_human_output.setReadOnly(True)
         partb_human_group.addWidget(self.partb_human_output)
+
+        # Add Copy Button for Part B Human Readable Output
+        copy_partb_human_btn = QPushButton(
+            "Copy Part B Human Readable to Clipboard")
+        copy_partb_human_btn.clicked.connect(
+            self.copy_partb_human_to_clipboard)
+        partb_human_group.addWidget(copy_partb_human_btn)
+
         partb_output_layout.addLayout(partb_human_group)
 
         # Part B LaTeX Output
@@ -116,6 +127,13 @@ class TFIDFWindow(QMainWindow):
         self.partb_latex_output = QTextEdit()
         self.partb_latex_output.setReadOnly(True)
         partb_latex_group.addWidget(self.partb_latex_output)
+
+        # Add Copy Button for Part B LaTeX Output
+        copy_partb_latex_btn = QPushButton("Copy Part B LaTeX to Clipboard")
+        copy_partb_latex_btn.clicked.connect(
+            self.copy_partb_latex_to_clipboard)
+        partb_latex_group.addWidget(copy_partb_latex_btn)
+
         partb_output_layout.addLayout(partb_latex_group)
 
         layout.addLayout(partb_output_layout)
@@ -263,6 +281,26 @@ class TFIDFWindow(QMainWindow):
                     f.write(latex_content)
             except Exception as e:
                 print(f"Error saving file: {e}")
+
+    def copy_latex_to_clipboard(self):
+        """Copy LaTeX output to clipboard."""
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.latex_output.toPlainText())
+
+    def copy_human_to_clipboard(self):
+        """Copy human-readable output to clipboard."""
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.human_output.toPlainText())
+
+    def copy_partb_latex_to_clipboard(self):
+        """Copy Part B LaTeX output to clipboard."""
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.partb_latex_output.toPlainText())
+
+    def copy_partb_human_to_clipboard(self):
+        """Copy Part B human-readable output to clipboard."""
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.partb_human_output.toPlainText())
 
 
 def main():

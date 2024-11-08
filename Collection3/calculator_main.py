@@ -1,7 +1,8 @@
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QTextEdit, QPushButton, QLabel,
-                             QFileDialog, QGridLayout)
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QTextEdit, QPushButton, QLabel, QFileDialog, QGridLayout, QTabWidget
+)
 from PyQt6.QtGui import QClipboard
 from tfidf_calculator import TFIDFCalculator
 from tfidf_formatter import TFIDFFormatter
@@ -14,19 +15,54 @@ class TFIDFWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.calculator = TFIDFCalculator()
+        self.relevance_scorer = None
         self.initUI()
 
     def initUI(self):
         """Initialize the user interface"""
-        self.setWindowTitle('TF-IDF Calculator')
-        self.setGeometry(100, 100, 1200, 800)
+        self.setWindowTitle('TF-IDF and Relevance Score Calculator')
+        self.setGeometry(100, 100, 800, 600)
 
         # Create central widget and layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
+        main_layout = QVBoxLayout(central_widget)
 
-        # Create input section
+        # Create tabs
+        self.tabs = QTabWidget()
+        main_layout.addWidget(self.tabs)
+
+        # Input Tab
+        self.input_tab = QWidget()
+        self.tabs.addTab(self.input_tab, "Inputs")
+        self.init_input_tab()
+
+        # Results Tab
+        self.results_tab = QWidget()
+        self.tabs.addTab(self.results_tab, "TF-IDF Results")
+        self.init_results_tab()
+
+        # Relevance Scores Tab
+        self.relevance_tab = QWidget()
+        self.tabs.addTab(self.relevance_tab, "Relevance Scores")
+        self.init_relevance_tab()
+
+        # Set default example texts
+        self.query_input.setText("What causes global warming?")
+        self.answer1_input.setText(
+            "Global warming is caused by an increase in greenhouse gases.")
+        self.answer2_input.setText(
+            "Deforestation contributes to global warming.")
+        self.answer3_input.setText(
+            "Electric vehicles help reduce carbon emissions.")
+
+        # Disable Relevance Scores button initially
+        self.calculate_relevance_btn.setEnabled(False)
+
+    def init_input_tab(self):
+        """Initialize the input tab"""
+        layout = QVBoxLayout(self.input_tab)
+
         input_layout = QGridLayout()
 
         # Query input
@@ -38,110 +74,102 @@ class TFIDFWindow(QMainWindow):
 
         # Answer inputs
         for i in range(3):
-            input_layout.addWidget(QLabel(f"Answer {i+1}:"), i+1, 0)
+            input_layout.addWidget(QLabel(f"Answer {i+1}:"), i + 1, 0)
             answer_input = QTextEdit()
             answer_input.setPlaceholderText(f"Enter answer {i+1} here...")
             answer_input.setMaximumHeight(50)
             setattr(self, f"answer{i+1}_input", answer_input)
-            input_layout.addWidget(answer_input, i+1, 1)
+            input_layout.addWidget(answer_input, i + 1, 1)
 
         layout.addLayout(input_layout)
 
-        # Buttons
+        # Action Buttons
         button_layout = QHBoxLayout()
 
-        calculate_btn = QPushButton("Calculate TF-IDF")
-        calculate_btn.clicked.connect(self.calculate_tfidf)
-        button_layout.addWidget(calculate_btn)
+        self.calculate_tfidf_btn = QPushButton("Calculate TF-IDF")
+        self.calculate_tfidf_btn.clicked.connect(self.calculate_tfidf)
+        self.calculate_tfidf_btn.setToolTip("Calculate TF-IDF vectors")
+        button_layout.addWidget(self.calculate_tfidf_btn)
 
-        save_latex_btn = QPushButton("Save LaTeX")
-        save_latex_btn.clicked.connect(self.save_latex)
-        button_layout.addWidget(save_latex_btn)
+        self.calculate_relevance_btn = QPushButton(
+            "Calculate Relevance Scores")
+        self.calculate_relevance_btn.clicked.connect(
+            self.calculate_relevance_scores)
+        self.calculate_relevance_btn.setToolTip(
+            "Calculate relevance scores (Requires TF-IDF calculation first)")
+        button_layout.addWidget(self.calculate_relevance_btn)
+
+        self.calculate_all_btn = QPushButton("Calculate All")
+        self.calculate_all_btn.clicked.connect(self.calculate_all)
+        self.calculate_all_btn.setToolTip(
+            "Perform both TF-IDF and relevance score calculations")
+        button_layout.addWidget(self.calculate_all_btn)
 
         layout.addLayout(button_layout)
 
-        # Output sections
-        output_layout = QHBoxLayout()
+    def init_results_tab(self):
+        """Initialize the TF-IDF results tab"""
+        layout = QVBoxLayout(self.results_tab)
 
-        # LaTeX output
-        latex_group = QVBoxLayout()
-        latex_group.addWidget(QLabel("LaTeX Output:"))
-        self.latex_output = QTextEdit()
-        self.latex_output.setReadOnly(True)
-        latex_group.addWidget(self.latex_output)
-
-        # Add Copy Button for LaTeX Output
-        copy_latex_btn = QPushButton("Copy LaTeX to Clipboard")
-        copy_latex_btn.clicked.connect(self.copy_latex_to_clipboard)
-        latex_group.addWidget(copy_latex_btn)
-
-        output_layout.addLayout(latex_group)
-
-        # Human readable output
-        human_group = QVBoxLayout()
-        human_group.addWidget(QLabel("Human Readable Output:"))
+        # Human Readable Output
+        layout.addWidget(QLabel("Human Readable Output:"))
         self.human_output = QTextEdit()
         self.human_output.setReadOnly(True)
-        human_group.addWidget(self.human_output)
+        layout.addWidget(self.human_output)
 
-        # Add Copy Button for Human Readable Output
         copy_human_btn = QPushButton("Copy Human Readable to Clipboard")
         copy_human_btn.clicked.connect(self.copy_human_to_clipboard)
-        human_group.addWidget(copy_human_btn)
+        layout.addWidget(copy_human_btn)
 
-        output_layout.addLayout(human_group)
+        # LaTeX Output
+        layout.addWidget(QLabel("LaTeX Output:"))
+        self.latex_output = QTextEdit()
+        self.latex_output.setReadOnly(True)
+        layout.addWidget(self.latex_output)
 
-        layout.addLayout(output_layout)
+        copy_latex_btn = QPushButton("Copy LaTeX to Clipboard")
+        copy_latex_btn.clicked.connect(self.copy_latex_to_clipboard)
+        layout.addWidget(copy_latex_btn)
 
-        # Set default example texts
-        self.query_input.setText("What causes global warming?")
-        self.answer1_input.setText(
-            "Global warming is caused by an increase in greenhouse gases.")
-        self.answer2_input.setText(
-            "Deforestation contributes to global warming.")
-        self.answer3_input.setText(
-            "Electric vehicles help reduce carbon emissions.")
+        # Save LaTeX Button
+        save_latex_btn = QPushButton("Save LaTeX")
+        save_latex_btn.clicked.connect(self.save_latex)
+        layout.addWidget(save_latex_btn)
 
-        # Part B Output Sections
-        partb_output_layout = QHBoxLayout()
+    def init_relevance_tab(self):
+        """Initialize the relevance scores tab"""
+        layout = QVBoxLayout(self.relevance_tab)
 
-        # Part B Human Readable Output
-        partb_human_group = QVBoxLayout()
-        partb_human_group.addWidget(QLabel("Part B Human Readable Output:"))
+        # Human Readable Output
+        layout.addWidget(QLabel("Relevance Scores (Human Readable):"))
         self.partb_human_output = QTextEdit()
         self.partb_human_output.setReadOnly(True)
-        partb_human_group.addWidget(self.partb_human_output)
+        layout.addWidget(self.partb_human_output)
 
-        # Add Copy Button for Part B Human Readable Output
-        copy_partb_human_btn = QPushButton(
-            "Copy Part B Human Readable to Clipboard")
+        copy_partb_human_btn = QPushButton("Copy to Clipboard")
         copy_partb_human_btn.clicked.connect(
             self.copy_partb_human_to_clipboard)
-        partb_human_group.addWidget(copy_partb_human_btn)
+        layout.addWidget(copy_partb_human_btn)
 
-        partb_output_layout.addLayout(partb_human_group)
-
-        # Part B LaTeX Output
-        partb_latex_group = QVBoxLayout()
-        partb_latex_group.addWidget(QLabel("Part B LaTeX Output:"))
+        # LaTeX Output
+        layout.addWidget(QLabel("Relevance Scores (LaTeX):"))
         self.partb_latex_output = QTextEdit()
         self.partb_latex_output.setReadOnly(True)
-        partb_latex_group.addWidget(self.partb_latex_output)
+        layout.addWidget(self.partb_latex_output)
 
-        # Add Copy Button for Part B LaTeX Output
-        copy_partb_latex_btn = QPushButton("Copy Part B LaTeX to Clipboard")
+        copy_partb_latex_btn = QPushButton("Copy to Clipboard")
         copy_partb_latex_btn.clicked.connect(
             self.copy_partb_latex_to_clipboard)
-        partb_latex_group.addWidget(copy_partb_latex_btn)
+        layout.addWidget(copy_partb_latex_btn)
 
-        partb_output_layout.addLayout(partb_latex_group)
-
-        layout.addLayout(partb_output_layout)
+        # Save LaTeX Button
+        save_partb_latex_btn = QPushButton("Save LaTeX")
+        save_partb_latex_btn.clicked.connect(self.save_partb_latex)
+        layout.addWidget(save_partb_latex_btn)
 
     def calculate_tfidf(self):
         """Calculate TF-IDF and update outputs."""
         query = self.query_input.toPlainText()
-        # Correctly access the individual answer inputs
         answers = [
             self.answer1_input.toPlainText(),
             self.answer2_input.toPlainText(),
@@ -159,13 +187,6 @@ class TFIDFWindow(QMainWindow):
         tfidf_vectors = self.calculator.tfidf_vectors
 
         # Update the outputs using the formatter
-        self.latex_output.setText(
-            TFIDFFormatter.generate_latex(
-                vocabulary=vocabulary,
-                tfidf_vectors=tfidf_vectors,
-                text_labels=self.calculator.text_labels
-            )
-        )
         self.human_output.setText(
             TFIDFFormatter.generate_human_readable(
                 vocabulary=vocabulary,
@@ -173,42 +194,19 @@ class TFIDFWindow(QMainWindow):
                 text_labels=self.calculator.text_labels
             )
         )
-
-    def save_latex(self):
-        """Save LaTeX output to file"""
-        if self.calculator.tfidf_vectors is None:
-            return
-
-        file_name, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save LaTeX File",
-            "",
-            "LaTeX Files (*.tex);;All Files (*)"
+        self.latex_output.setText(
+            TFIDFFormatter.generate_latex(
+                vocabulary=vocabulary,
+                tfidf_vectors=tfidf_vectors,
+                text_labels=self.calculator.text_labels
+            )
         )
 
-        if file_name:
-            if not file_name.endswith('.tex'):
-                file_name += '.tex'
+        # Enable Relevance Scores button
+        self.calculate_relevance_btn.setEnabled(True)
 
-            latex_content = (
-                "\\documentclass[12pt]{article}\n"
-                "\\usepackage{amsmath}\n"
-                "\\usepackage{geometry}\n"
-                "\\geometry{margin=1in}\n"
-                "\\begin{document}\n\n"
-                "% TF-IDF Matrix for Query and Answers\n"
-                "\\[\n"
-                f"{self.calculator.generate_latex()}\n"
-                "\\]\n\n"
-                "\\end{document}"
-            )
-
-            try:
-                with open(file_name, 'w') as f:
-                    f.write(latex_content)
-                print(f"Successfully saved LaTeX file to {file_name}")
-            except Exception as e:
-                print(f"Error saving file: {e}")
+        # Switch to Results Tab
+        self.tabs.setCurrentWidget(self.results_tab)
 
     def calculate_relevance_scores(self):
         """Calculate relevance scores and update Part B outputs."""
@@ -252,6 +250,50 @@ class TFIDFWindow(QMainWindow):
         self.partb_latex_output.setText(
             self.relevance_scorer.get_step_by_step_latex())
 
+        # Switch to Relevance Scores Tab
+        self.tabs.setCurrentWidget(self.relevance_tab)
+
+    def calculate_all(self):
+        """Perform both TF-IDF and relevance score calculations."""
+        self.calculate_tfidf()
+        self.calculate_relevance_scores()
+
+    def save_latex(self):
+        """Save LaTeX output to file"""
+        if self.calculator.tfidf_vectors is None:
+            return
+
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save LaTeX File",
+            "",
+            "LaTeX Files (*.tex);;All Files (*)"
+        )
+
+        if file_name:
+            if not file_name.endswith('.tex'):
+                file_name += '.tex'
+
+            latex_content = (
+                "\\documentclass[12pt]{article}\n"
+                "\\usepackage{amsmath}\n"
+                "\\usepackage{geometry}\n"
+                "\\geometry{margin=1in}\n"
+                "\\begin{document}\n\n"
+                "% TF-IDF Matrix for Query and Answers\n"
+                "\\[\n"
+                f"{self.latex_output.toPlainText()}\n"
+                "\\]\n\n"
+                "\\end{document}"
+            )
+
+            try:
+                with open(file_name, 'w') as f:
+                    f.write(latex_content)
+                print(f"Successfully saved LaTeX file to {file_name}")
+            except Exception as e:
+                print(f"Error saving file: {e}")
+
     def save_partb_latex(self):
         """Save Part B LaTeX output to file."""
         if not hasattr(self, 'relevance_scorer'):
@@ -272,7 +314,7 @@ class TFIDFWindow(QMainWindow):
                 "\\documentclass{article}\n"
                 "\\usepackage{amsmath}\n"
                 "\\begin{document}\n\n"
-                f"{self.relevance_scorer.get_step_by_step_latex()}\n"
+                f"{self.partb_latex_output.toPlainText()}\n"
                 "\\end{document}"
             )
 
@@ -282,6 +324,7 @@ class TFIDFWindow(QMainWindow):
             except Exception as e:
                 print(f"Error saving file: {e}")
 
+    # Copy methods
     def copy_latex_to_clipboard(self):
         """Copy LaTeX output to clipboard."""
         clipboard = QApplication.clipboard()

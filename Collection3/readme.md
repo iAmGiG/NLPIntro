@@ -130,7 +130,3 @@ python calculator_main.py
    - Implement unit tests for core functionalities (TF-IDF calculation, BM25, cosine similarity).
    - Add in-code comments and docstrings for better readability and maintainability.
    - Provide a user manual or help section within the application for better onboarding.
-
----
-
-By following these recommendations, the project can achieve better maintainability, scalability, and user satisfaction. Future updates can focus on implementing these enhancements and expanding the functionality of the application.

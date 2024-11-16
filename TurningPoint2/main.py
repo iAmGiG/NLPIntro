@@ -1,5 +1,5 @@
-# main.py
 import sys
+import copy
 from PyQt6.QtWidgets import QApplication
 from ui_module import TranslationUI
 from data_processing import preprocess_sentence

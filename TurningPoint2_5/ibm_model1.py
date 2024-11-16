@@ -118,7 +118,9 @@ class IBMModel1:
         return "\n".join(latex)
 
     def generate_convergence_table(self):
-        """Generate LaTeX code for convergence table"""
+        """
+        Generate LaTeX code for convergence table
+        """
         latex = [
             "\\begin{table}[H]",
             "\\centering",

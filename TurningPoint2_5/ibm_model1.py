@@ -4,18 +4,15 @@ import math
 
 class IBMModel1:
     def __init__(self, eng_sentence, foreign_sentence):
-        # Store sentences and vocabularies
         self.eng_sentence = eng_sentence.lower().split()
         self.foreign_sentence = foreign_sentence.lower().split()
         self.eng_vocab = sorted(set(self.eng_sentence))
         self.foreign_vocab = sorted(set(self.foreign_sentence))
-
-        # History tracking
         self.convergence_history = []
         self.iteration_tables = []
 
     def train(self, iterations=2):
-        # Step 1: Initialize translation probabilities uniformly
+        # Initialize t(e|f) uniformly
         t = {}
         for e in self.eng_vocab:
             t[e] = {}
@@ -33,29 +30,41 @@ class IBMModel1:
             count = defaultdict(lambda: defaultdict(float))
             total = defaultdict(float)
 
-            # For each pair in the sentence
-            for e_i, f_i in zip(self.eng_sentence, self.foreign_sentence):
-                # Calculate denominator for this English word
-                denom = sum(t[e_i][f_j] for f_j in self.foreign_sentence)
+            # For each position in the sentences
+            for i, e_i in enumerate(self.eng_sentence):
+                # Calculate normalization for this English word
+                norm = sum(t[e_i][f_j] for f_j in self.foreign_vocab)
 
-                # Update counts
-                if denom > 0:  # Avoid division by zero
-                    delta = t[e_i][f_i] / denom
-                    count[f_i][e_i] += delta
-                    total[f_i] += delta
+                # For each foreign word in the foreign sentence
+                for f_i in self.foreign_sentence:
+                    # Calculate fractional count
+                    if norm > 0:
+                        c = t[e_i][f_i] / norm
+                        count[e_i][f_i] += c
+                        total[f_i] += c
 
             # M-step: Update probabilities
-            for f in self.foreign_vocab:
-                for e in self.eng_vocab:
+            new_t = {}
+            for e in self.eng_vocab:
+                new_t[e] = {}
+                for f in self.foreign_vocab:
                     if total[f] > 0:
-                        t[e][f] = count[f][e] / total[f]
+                        # Apply smoothing to avoid extreme probabilities
+                        smooth_count = count[e][f] + 0.1
+                        smooth_total = total[f] + 0.1 * len(self.eng_vocab)
+                        new_t[e][f] = smooth_count / smooth_total
+                    else:
+                        # Keep old probability if no counts
+                        new_t[e][f] = t[e][f]
 
-            # Store state for this iteration
+            t = new_t
+
+            # Store current state
             self.convergence_history.append(dict(((e, f), t[e][f])
                                                  for e in self.eng_vocab
                                                  for f in self.foreign_vocab))
 
-            # Calculate perplexity
+            # Calculate and store iteration results
             perplexity = self._calculate_perplexity(t)
             self.iteration_tables.append({
                 'probabilities': {e: dict(t[e]) for e in t},
@@ -65,7 +74,7 @@ class IBMModel1:
         return self.convergence_history, self.iteration_tables
 
     def _calculate_perplexity(self, t):
-        """Calculate model perplexity"""
+        """Calculate perplexity over the training data"""
         log_prob = 0.0
         for e, f in zip(self.eng_sentence, self.foreign_sentence):
             prob = t[e][f]

@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton,
-    QTextEdit, QHBoxLayout, QScrollArea, QSpinBox
+    QTextEdit, QHBoxLayout, QSpinBox
 )
 from PyQt6.QtCore import pyqtSlot
 
@@ -17,6 +17,11 @@ class TranslationUI(QWidget):
         super().__init__()
         self.setWindowTitle("Machine Translation Tool")
 
+        # Initialize scores
+        self.fluency_score = 0.0
+        self.adequacy_score = 0.0
+        self.bleu_score = 0.0
+
         # Main layout
         self.layout = QVBoxLayout()
 
@@ -29,24 +34,18 @@ class TranslationUI(QWidget):
         self.target_input = QLineEdit()
         self.target_input.setText("la casa es pequeña")
 
-        self.input_layout.addWidget(self.source_label)
-        self.input_layout.addWidget(self.source_input)
-        self.input_layout.addWidget(self.target_label)
-        self.input_layout.addWidget(self.target_input)
-
-        # Training parameters layout
-        self.training_params_layout = QVBoxLayout()
+        # Iterations input
         self.iterations_label = QLabel("Number of Iterations:")
         self.iterations_input = QSpinBox()
         self.iterations_input.setMinimum(1)
         self.iterations_input.setValue(2)  # Default value
-        self.training_params_layout.addWidget(self.iterations_label)
-        self.training_params_layout.addWidget(self.iterations_input)
 
-        # Combine input fields and training params
-        self.combined_input_layout = QHBoxLayout()
-        self.combined_input_layout.addLayout(self.input_layout)
-        self.combined_input_layout.addLayout(self.training_params_layout)
+        self.input_layout.addWidget(self.source_label)
+        self.input_layout.addWidget(self.source_input)
+        self.input_layout.addWidget(self.target_label)
+        self.input_layout.addWidget(self.target_input)
+        self.input_layout.addWidget(self.iterations_label)
+        self.input_layout.addWidget(self.iterations_input)
 
         # Buttons layout
         self.buttons_layout = QHBoxLayout()
@@ -62,11 +61,33 @@ class TranslationUI(QWidget):
         self.latex_preview = QTextEdit()
         self.latex_preview.setReadOnly(True)
         self.latex_preview.setAcceptRichText(False)
+        self.latex_preview.setMinimumHeight(200)
 
-        # Add to layout
-        self.layout.addLayout(self.combined_input_layout)
+        # Scores display
+        self.scores_layout = QVBoxLayout()
+        self.fluency_label = QLabel("Fluency Score: N/A")
+        self.adequacy_label = QLabel("Adequacy Score: N/A")
+        self.bleu_label = QLabel("BLEU Score: N/A")
+
+        self.scores_layout.addWidget(self.fluency_label)
+        self.scores_layout.addWidget(self.adequacy_label)
+        self.scores_layout.addWidget(self.bleu_label)
+
+        # Error message label
+        self.error_label = QLabel("")
+        self.error_label.setStyleSheet("color: red;")
+
+        # Add widgets to main layout
+        self.layout.addLayout(self.input_layout)
         self.layout.addLayout(self.buttons_layout)
+        self.layout.addWidget(self.error_label)
+        self.layout.addLayout(self.scores_layout)
         self.layout.addWidget(self.latex_label)
         self.layout.addWidget(self.latex_preview)
 
         self.setLayout(self.layout)
+
+    def update_scores_display(self, fluency_score: float, adequacy_score: float, bleu_score: float):
+        self.fluency_label.setText(f"Fluency Score: {fluency_score:.4f}")
+        self.adequacy_label.setText(f"Adequacy Score: {adequacy_score:.4f}")
+        self.bleu_label.setText(f"BLEU Score: {bleu_score:.4f}")

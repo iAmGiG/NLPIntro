@@ -1,4 +1,15 @@
-def generate_latex_output(iteration_data, source_tokens, target_tokens):
+# latex_output.py
+def generate_latex_output(
+    iteration_data,
+    source_tokens,
+    target_tokens,
+    fluency_score,
+    adequacy_score,
+    bleu_score
+):
+    """
+    Generates LaTeX formatted output for the EM algorithm steps and scoring results.
+    """
     latex_content = "\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n"
     latex_content += "\\begin{document}\n"
 
@@ -31,11 +42,12 @@ def generate_latex_output(iteration_data, source_tokens, target_tokens):
         count = data['count']
         normalization_factors = data['norm']
         delta_values = data['delta']
+        t = data['t']
         for f in target_tokens:
             s_total = normalization_factors[f]
             for e in source_tokens:
                 delta = delta_values[e][f]
-                prob = data['t'][f][e]
+                prob = t[f][e]
                 latex_content += f"{f} & {s_total:.4f} & {
                     e} & {prob:.4f} & {delta:.4f} \\\\\n"
         latex_content += "\\hline\n"
@@ -49,9 +61,9 @@ def generate_latex_output(iteration_data, source_tokens, target_tokens):
         latex_content += "\\hline\n"
         total_e = data['total_e']
         for e in source_tokens:
+            total = total_e[e]
             for f in target_tokens:
                 cnt = count[e][f]
-                total = total_e[e]
                 latex_content += f"{e} & {f} & {cnt:.4f} & {total:.4f} \\\\\n"
         latex_content += "\\hline\n"
         latex_content += "\\end{tabular}\n"
@@ -63,13 +75,30 @@ def generate_latex_output(iteration_data, source_tokens, target_tokens):
         latex_content += "\\hline\n"
         latex_content += "English Word ($e_i$) & Spanish Word ($f_j$) & Updated $t(f_j|e_i)$ \\\\\n"
         latex_content += "\\hline\n"
-        t = data['t']
         for e in source_tokens:
             for f in target_tokens:
                 prob = t[f][e]
                 latex_content += f"{e} & {f} & {prob:.4f} \\\\\n"
         latex_content += "\\hline\n"
         latex_content += "\\end{tabular}\n"
+
+    # Translation Evaluation Metrics
+    latex_content += "\\section*{Translation Evaluation Metrics}\n"
+
+    # Fluency Score
+    latex_content += "\\subsection*{Fluency Score}\n"
+    latex_content += f"The fluency score of the translation is {
+        fluency_score:.4f}.\n"
+
+    # Adequacy Score
+    latex_content += "\\subsection*{Adequacy Score}\n"
+    latex_content += f"The adequacy score comparing the source and translation is {
+        adequacy_score:.4f}.\n"
+
+    # BLEU Score
+    latex_content += "\\subsection*{BLEU Score}\n"
+    latex_content += f"The BLEU score of the translation is {
+        bleu_score:.4f}.\n"
 
     latex_content += "\\end{document}"
     return latex_content

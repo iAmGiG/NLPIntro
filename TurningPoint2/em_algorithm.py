@@ -10,6 +10,13 @@ def initialize_probabilities(
 ) -> DefaultDict[str, DefaultDict[str, float]]:
     """
     Initializes translation probabilities uniformly.
+
+    Args:
+        source_tokens: List of source language tokens.
+        target_tokens: List of target language tokens.
+
+    Returns:
+        Nested dictionary with translation probabilities t[f][e].
     """
     if not source_tokens or not target_tokens:
         raise ValueError("Source and target tokens cannot be empty")

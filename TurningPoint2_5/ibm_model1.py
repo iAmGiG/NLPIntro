@@ -5,43 +5,47 @@ import math
 
 class IBMModel1:
     def __init__(self, eng_sentence, foreign_sentence):
-        # Initialize word lists and remove duplicates while maintaining order
-        self.eng_words = list(dict.fromkeys(eng_sentence.lower().split()))
-        self.foreign_words = list(dict.fromkeys(
-            foreign_sentence.lower().split()))
+        # Keep the original sentences as lists of words
+        self.eng_sentence = eng_sentence.lower().split()
+        self.foreign_sentence = foreign_sentence.lower().split()
+
+        # Get unique words for vocabulary
+        self.eng_vocab = sorted(set(self.eng_sentence))
+        self.foreign_vocab = sorted(set(self.foreign_sentence))
+
         self.convergence_history = []
         self.iteration_tables = []
 
     def train(self, iterations=2):
-        # Initialize t(e|f) uniformly for all possible translations
+        # Initialize t(e|f) uniformly
         t = defaultdict(lambda: defaultdict(float))
-        for e in self.eng_words:
-            for f in self.foreign_words:
-                t[e][f] = 1.0 / len(self.foreign_words)
+        for e in self.eng_vocab:
+            for f in self.foreign_vocab:
+                t[e][f] = 1.0 / len(self.foreign_vocab)
 
         # Store initial probabilities
         self.convergence_history.append(self._get_probability_table(t))
 
-        # Run EM for specified number of iterations
+        # EM iterations
         for iteration in range(iterations):
             # Initialize count tables
             count = defaultdict(lambda: defaultdict(float))
             total = defaultdict(float)
 
             # E-step: Collect counts
-            for e in self.eng_words:
-                # Compute normalization (s-total)
-                s_total = sum(t[e][f] for f in self.foreign_words)
+            for e_idx, e in enumerate(self.eng_sentence):
+                # Compute normalization for this English word
+                denom = sum(t[e][f] for f in self.foreign_sentence)
 
-                for f in self.foreign_words:
-                    # Compute weighted count
-                    c = t[e][f] / s_total if s_total > 0 else 0
-                    count[e][f] += c
-                    total[f] += c
+                # Update counts for all possible foreign words
+                for f_idx, f in enumerate(self.foreign_sentence):
+                    delta = t[e][f] / denom if denom > 0 else 0
+                    count[e][f] += delta
+                    total[f] += delta
 
             # M-step: Estimate probabilities
-            for f in self.foreign_words:
-                for e in self.eng_words:
+            for f in self.foreign_vocab:
+                for e in self.eng_vocab:
                     if total[f] > 0:
                         t[e][f] = count[e][f] / total[f]
                     else:
@@ -61,12 +65,12 @@ class IBMModel1:
 
     def _get_probability_table(self, t):
         """Create a dictionary of (e,f) -> probability mappings"""
-        return {(e, f): t[e][f] for e in self.eng_words for f in self.foreign_words}
+        return {(e, f): t[e][f] for e in self.eng_vocab for f in self.foreign_vocab}
 
     def _calculate_perplexity(self, t):
         """Calculate perplexity using the current probability table"""
         log_prob = 0
-        sentence_pairs = list(zip(self.eng_words, self.foreign_words))
+        sentence_pairs = zip(self.eng_sentence, self.foreign_sentence)
 
         for e, f in sentence_pairs:
             prob = t[e][f]
@@ -76,7 +80,7 @@ class IBMModel1:
                 # Smoothing for zero probabilities
                 log_prob -= math.log2(1e-10)
 
-        return 2 ** (log_prob / len(sentence_pairs))
+        return 2 ** (log_prob / len(self.eng_sentence))
 
     def generate_latex_table(self, iteration_data):
         """Generate LaTeX code for probability table with perplexity"""
@@ -84,23 +88,23 @@ class IBMModel1:
             "\\begin{table}[H]",
             "\\centering",
             "\\resizebox{\\textwidth}{!}{%",  # Make table fit page width
-            "\\begin{tabular}{l|" + "c" * len(self.foreign_words) + "}",
+            "\\begin{tabular}{l|" + "c" * len(self.foreign_vocab) + "}",
             "\\toprule",
             "& " + \
             " & ".join(
-                [f"\\textbf{{{w}}}" for w in self.foreign_words]) + "\\\\",
+                [f"\\textbf{{{w}}}" for w in self.foreign_vocab]) + "\\\\",
             "\\midrule"
         ]
 
         probs = iteration_data['probabilities']
-        for e in self.eng_words:
+        for e in self.eng_vocab:
             row = [e]
-            row.extend([f"{probs[e][f]:.4f}" for f in self.foreign_words])
+            row.extend([f"{probs[e][f]:.4f}" for f in self.foreign_vocab])
             latex.append(" & ".join(row) + "\\\\")
 
         latex.extend([
             "\\midrule",
-            f"\\multicolumn{{{len(self.foreign_words) + 1}}}{{r}}{{Perplexity: {
+            f"\\multicolumn{{{len(self.foreign_vocab) + 1}}}{{r}}{{Perplexity: {
                 iteration_data['perplexity']:.2f}}}\\\\",
             "\\bottomrule",
             "\\end{tabular}",
@@ -125,8 +129,8 @@ class IBMModel1:
             "\\midrule"
         ]
 
-        for e in self.eng_words:
-            for f in self.foreign_words:
+        for e in self.eng_vocab:
+            for f in self.foreign_vocab:
                 row = [e, f]
                 for table in self.convergence_history:
                     row.append(f"{table[(e, f)]:.4f}")

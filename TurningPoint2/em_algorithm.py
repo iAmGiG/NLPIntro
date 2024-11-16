@@ -22,23 +22,20 @@ def em_step(t, source_tokens, target_tokens):
     """
     count = defaultdict(lambda: defaultdict(float))
     total_e = defaultdict(float)
-    total_f = defaultdict(float)
+    normalization_factors = {}
 
     # Expectation Step
-    for e in source_tokens:
-        normalization_factor = 0.0
-        for f in target_tokens:
-            normalization_factor += t[f][e]
-        for f in target_tokens:
+    for f in target_tokens:
+        normalization_factor = sum(t[f][e] for e in source_tokens)
+        normalization_factors[f] = normalization_factor
+        for e in source_tokens:
             delta = t[f][e] / normalization_factor
             count[e][f] += delta
             total_e[e] += delta
-            total_f[f] += delta
 
     # Maximization Step
-    for e in count:
+    for e in total_e:
         for f in count[e]:
             t[f][e] = count[e][f] / total_e[e]
 
-    # Return deep copies for recording
-    return copy.deepcopy(t), copy.deepcopy(count)
+    return copy.deepcopy(t), copy.deepcopy(count), normalization_factors

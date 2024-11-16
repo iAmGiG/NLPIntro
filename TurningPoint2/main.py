@@ -18,8 +18,8 @@ def start_training(ui):
 
     for _ in range(2):  # Two iterations
         t_copy = copy.deepcopy(t)
-        t, count = em_step(t, source_tokens, target_tokens)
-        iteration_data.append({'t': t_copy, 'count': count})
+        t, count, norm = em_step(t, source_tokens, target_tokens)
+        iteration_data.append({'t': t_copy, 'count': count, 'norm': norm})
 
     latex_content = generate_latex_output(
         iteration_data, source_tokens, target_tokens)

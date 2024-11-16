@@ -88,8 +88,8 @@ class IBMModel1LatexGenerator(QMainWindow):
             "\\section{IBM Model 1 Training Results}",
             "",
             f"\\textbf{{Training Pair:}}\\\\",
-            f"English: {' '.join(model.eng_words)}\\\\",
-            f"Spanish: {' '.join(model.foreign_words)}\\\\",
+            f"English: {' '.join(model.eng_sentence)}\\\\",
+            f"Spanish: {' '.join(model.foreign_sentence)}\\\\",
             ""
         ])
 

@@ -1,9 +1,15 @@
-# ui_module.py
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton,
-    QTextEdit, QHBoxLayout, QScrollArea
+    QTextEdit, QHBoxLayout, QScrollArea, QSpinBox
 )
 from PyQt6.QtCore import pyqtSlot
+
+
+def display_error(self, message: str, field: QLineEdit):
+    field.setStyleSheet("border: 1px solid red;")
+    error_label = QLabel(message)
+    error_label.setStyleSheet("color: red;")
+    self.layout.addWidget(error_label)
 
 
 class TranslationUI(QWidget):
@@ -28,6 +34,20 @@ class TranslationUI(QWidget):
         self.input_layout.addWidget(self.target_label)
         self.input_layout.addWidget(self.target_input)
 
+        # Training parameters layout
+        self.training_params_layout = QVBoxLayout()
+        self.iterations_label = QLabel("Number of Iterations:")
+        self.iterations_input = QSpinBox()
+        self.iterations_input.setMinimum(1)
+        self.iterations_input.setValue(2)  # Default value
+        self.training_params_layout.addWidget(self.iterations_label)
+        self.training_params_layout.addWidget(self.iterations_input)
+
+        # Combine input fields and training params
+        self.combined_input_layout = QHBoxLayout()
+        self.combined_input_layout.addLayout(self.input_layout)
+        self.combined_input_layout.addLayout(self.training_params_layout)
+
         # Buttons layout
         self.buttons_layout = QHBoxLayout()
         self.train_button = QPushButton("Train Model")
@@ -43,8 +63,8 @@ class TranslationUI(QWidget):
         self.latex_preview.setReadOnly(True)
         self.latex_preview.setAcceptRichText(False)
 
-        # Add widgets to main layout
-        self.layout.addLayout(self.input_layout)
+        # Add to layout
+        self.layout.addLayout(self.combined_input_layout)
         self.layout.addLayout(self.buttons_layout)
         self.layout.addWidget(self.latex_label)
         self.layout.addWidget(self.latex_preview)

@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QLabel, QLineEdit, QSpinBox, QPushButton,
+                             QLabel, QLineEdit, QSpinBox, QPushButton,
                              QTextEdit, QScrollArea, QGridLayout)
-from PyQt6.QtCore import Qt
 from ibm_model1 import IBMModel1
 
 
@@ -65,6 +64,11 @@ class IBMModel1LatexGenerator(QMainWindow):
         model = IBMModel1(eng_sentence, foreign_sentence)
         convergence_history, iteration_tables = model.train(iterations)
 
+        # Debugging: Print the contents of iteration_tables
+        print(f"Total Iterations: {iterations}")
+        for i, table in enumerate(iteration_tables):
+            print(f"Iteration {i + 1}: {table}")
+
         # Generate complete LaTeX document
         latex = self.generate_latex_document(
             model, convergence_history, iteration_tables)
@@ -100,10 +104,13 @@ class IBMModel1LatexGenerator(QMainWindow):
 
         # Add iteration tables with perplexity
         latex.append("\\subsection{Detailed Iteration Results}")
-        for i, iteration_data in enumerate(iteration_tables):
-            latex.append(f"\\subsubsection{{Iteration {i+1}}}")
-            latex.append(model.generate_latex_table(iteration_data))
-            latex.append("")
+        if not iteration_tables:
+            latex.append("\\textbf{No iterations data available.}")
+        else:
+            for i, iteration_data in enumerate(iteration_tables):
+                latex.append(f"\\subsubsection{{Iteration {i + 1}}}")
+                latex.append(model.generate_latex_table(iteration_data))
+                latex.append("")
 
         # Close document
         latex.append("\\end{document}")

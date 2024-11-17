@@ -4,88 +4,135 @@ import math
 
 class IBMModel1:
     def __init__(self, eng_sentence, foreign_sentence):
-        self.eng_sentence = eng_sentence.lower().split()
-        self.foreign_sentence = foreign_sentence.lower().split()
-        self.eng_vocab = sorted(set(self.eng_sentence))
-        self.foreign_vocab = sorted(set(self.foreign_sentence))
+        """Initialize IBM Model 1 with sentence pair."""
+        self.eng_words = eng_sentence.lower().split()
+        self.foreign_words = foreign_sentence.lower().split()
+        self.eng_sentence = self.eng_words
+        self.foreign_sentence = self.foreign_words
+        self.eng_vocab = sorted(set(self.eng_words))
+        self.foreign_vocab = sorted(set(self.foreign_words))
         self.convergence_history = []
         self.iteration_tables = []
 
+        print(f"English sentence: {' '.join(self.eng_words)}")
+        print(f"Foreign sentence: {' '.join(self.foreign_words)}")
+
     def train(self, iterations=2):
-        # Initialize t(e|f) uniformly
-        t = {}
+        """Train IBM Model 1 using EM algorithm."""
+        # Step 1: Initialize translation probabilities t(f|e)
+        t = defaultdict(lambda: defaultdict(float))
         for e in self.eng_vocab:
-            t[e] = {}
             for f in self.foreign_vocab:
                 t[e][f] = 1.0 / len(self.foreign_vocab)
 
-        # Store initial state
-        self.convergence_history.append(dict(((e, f), t[e][f])
-                                             for e in self.eng_vocab
-                                             for f in self.foreign_vocab))
+        print("\nInitial probabilities:")
+        self._print_table(t)
+        self.convergence_history.append(self._get_table_for_history(t))
 
         # EM iterations
-        for _ in range(iterations):
+        for iteration in range(iterations):
+            print(f"\nIteration {iteration + 1}")
+
+            # Reset counts for this iteration
+            count = defaultdict(lambda: defaultdict(float))  # c(e,f)
+            total = defaultdict(float)  # total(e)
+
+            # For each sentence pair in corpus (in this case, just one)
             # E-step: Collect counts
-            count = defaultdict(lambda: defaultdict(float))
-            total = defaultdict(float)
+            for i, f_i in enumerate(self.foreign_words):
+                print(f"\nProcessing foreign word '{f_i}' at position {i}")
 
-            # For each position in the sentences
-            for i, e_i in enumerate(self.eng_sentence):
-                # Calculate normalization for this English word
-                norm = sum(t[e_i][f_j] for f_j in self.foreign_vocab)
+                # Calculate normalization for this foreign word
+                z = defaultdict(float)  # Store normalization factors
+                for j, e_j in enumerate(self.eng_words):
+                    z[i] += t[e_j][f_i]
 
-                # For each foreign word in the foreign sentence
-                for f_i in self.foreign_sentence:
-                    # Calculate fractional count
-                    if norm > 0:
-                        c = t[e_i][f_i] / norm
-                        count[e_i][f_i] += c
-                        total[f_i] += c
+                print(f"Normalization factor z[{i}] = {z[i]:.4f}")
 
-            # M-step: Update probabilities
-            new_t = {}
+                # Calculate alignment probabilities and update counts
+                for j, e_j in enumerate(self.eng_words):
+                    if z[i] > 0:  # Prevent division by zero
+                        # Calculate delta (expected count) for this word pair
+                        delta = t[e_j][f_i] / z[i]
+
+                        # Update counts and totals
+                        count[e_j][f_i] += delta
+                        total[e_j] += delta
+
+                        print(f"  {e_j}->{f_i}: "
+                              f"t={t[e_j][f_i]:.4f}, "
+                              f"delta={delta:.4f}, "
+                              f"count={count[e_j][f_i]:.4f}, "
+                              f"total={total[e_j]:.4f}")
+
+            # M-step: Update translation probabilities
+            new_t = defaultdict(lambda: defaultdict(float))
             for e in self.eng_vocab:
-                new_t[e] = {}
-                for f in self.foreign_vocab:
-                    if total[f] > 0:
-                        # Apply smoothing to avoid extreme probabilities
-                        smooth_count = count[e][f] + 0.1
-                        smooth_total = total[f] + 0.1 * len(self.eng_vocab)
-                        new_t[e][f] = smooth_count / smooth_total
-                    else:
-                        # Keep old probability if no counts
-                        new_t[e][f] = t[e][f]
+                if total[e] > 0:  # Only update if we have counts
+                    for f in self.foreign_vocab:
+                        # Maximum likelihood estimate
+                        new_t[e][f] = count[e][f] / total[e]
 
+            # Store updated probabilities
             t = new_t
+            print("\nUpdated probabilities:")
+            self._print_table(t)
 
-            # Store current state
-            self.convergence_history.append(dict(((e, f), t[e][f])
-                                                 for e in self.eng_vocab
-                                                 for f in self.foreign_vocab))
-
-            # Calculate and store iteration results
+            # Store state for this iteration
+            self.convergence_history.append(self._get_table_for_history(t))
             perplexity = self._calculate_perplexity(t)
             self.iteration_tables.append({
-                'probabilities': {e: dict(t[e]) for e in t},
+                'probabilities': self._get_table_for_latex(t),
                 'perplexity': perplexity
             })
+            print(f"Perplexity: {perplexity:.4f}")
 
         return self.convergence_history, self.iteration_tables
 
     def _calculate_perplexity(self, t):
-        """Calculate perplexity over the training data"""
+        """Calculate perplexity using current parameters."""
         log_prob = 0.0
-        for e, f in zip(self.eng_sentence, self.foreign_sentence):
-            prob = t[e][f]
+        for f_i in self.foreign_words:
+            # Calculate probability of this foreign word
+            prob = 0.0
+            for e_j in self.eng_words:
+                prob += t[e_j][f_i]
+
             if prob > 0:
-                log_prob += math.log2(prob)
+                log_prob += math.log2(prob / len(self.eng_words))
             else:
                 log_prob += math.log2(1e-10)  # Smoothing
-        return 2 ** (-log_prob / len(self.eng_sentence))
 
+        return 2 ** (-log_prob / len(self.foreign_words))
+
+    def _print_table(self, t):
+        """Print current probability table."""
+        print("\nt(f|e) table [rows=e, cols=f]:")
+        print(" " * 8, end="")
+        for f in self.foreign_vocab:
+            print(f"{f:>8}", end=" ")
+        print("\n" + "-" * (8 + 9 * len(self.foreign_vocab)))
+
+        for e in self.eng_vocab:
+            print(f"{e:8}", end="")
+            for f in self.foreign_vocab:
+                print(f"{t[e][f]:8.4f}", end=" ")
+            print()
+
+    def _get_table_for_history(self, t):
+        """Convert probability table for history tracking."""
+        return {(e, f): t[e][f]
+                for e in self.eng_vocab
+                for f in self.foreign_vocab}
+
+    def _get_table_for_latex(self, t):
+        """Convert probability table for LaTeX output."""
+        return {(e, f): t[e][f]
+                for e in self.eng_vocab
+                for f in self.foreign_vocab}
+
+    # LaTeX generation methods remain the same...
     def generate_latex_table(self, iteration_data):
-        """Generate LaTeX code for probability table with perplexity"""
         latex = [
             "\\begin{table}[H]",
             "\\centering",
@@ -101,7 +148,7 @@ class IBMModel1:
         probs = iteration_data['probabilities']
         for e in self.eng_vocab:
             row = [e]
-            row.extend([f"{probs[e][f]:.4f}" for f in self.foreign_vocab])
+            row.extend([f"{probs[(e, f)]:.4f}" for f in self.foreign_vocab])
             latex.append(" & ".join(row) + "\\\\")
 
         latex.extend([
@@ -118,9 +165,6 @@ class IBMModel1:
         return "\n".join(latex)
 
     def generate_convergence_table(self):
-        """
-        Generate LaTeX code for convergence table
-        """
         latex = [
             "\\begin{table}[H]",
             "\\centering",
